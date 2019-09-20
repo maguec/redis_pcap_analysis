@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/gopacket"
@@ -65,10 +67,22 @@ func main() {
 		packetCount++
 	}
 
+	r, _ := regexp.Compile("DTMDTM:([0-9]+)")
+
 	for key, value := range packets {
 		if value.count > 1 {
 			if value.pkts[0].payload == value.pkts[len(value.pkts)-1].payload {
-				fmt.Printf("sequence: %d, time_diff: %d ms\n", key, value.pkts[len(value.pkts)-1].timestamp.Sub(value.pkts[0].timestamp).Milliseconds())
+				//fmt.Println("-------------------------")
+				//fmt.Println(value.pkts[len(value.pkts)-1].payload)
+				m := r.FindAllString(value.pkts[len(value.pkts)-1].payload, -1)
+				if len(m) > 0 {
+					fmt.Printf("sequence: %d, time_diff: %d ms, key: %s, offset: %d\n",
+						key,
+						value.pkts[len(value.pkts)-1].timestamp.Sub(value.pkts[0].timestamp).Milliseconds(),
+						strings.Replace(m[0], "DTMDTM:", "", -1),
+						value.pkts[len(value.pkts)-1].offset)
+				}
+
 			}
 
 		}
