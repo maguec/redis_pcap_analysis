@@ -38,7 +38,7 @@ func main() {
 	redisHost := flag.String("host", "localhost", "Redis Host")
 	redisPort := flag.Int("port", 6379, "Redis Port")
 	redisPassword := flag.String("password", "", "RedisPassword")
-	messageCount := flag.Int("message_count", 100000, "run this man times")
+	messageCount := flag.Int("message_count", 10000, "run this man times")
 	threadCount := flag.Int("threadcount", 10, "run this man threads")
 	flag.Parse()
 
