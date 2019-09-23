@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"regexp"
@@ -13,9 +14,8 @@ import (
 )
 
 var (
-	pcapFile string = "dump.pcap"
-	handle   *pcap.Handle
-	err      error
+	handle *pcap.Handle
+	err    error
 )
 
 type pktinfo struct {
@@ -30,8 +30,10 @@ type pdata struct {
 }
 
 func main() {
-	// Open file instead of device
-	handle, err = pcap.OpenOffline(pcapFile)
+	pcapFile := flag.String("file", "dump.pcap", "TCP Dump file")
+	flag.Parse()
+
+	handle, err = pcap.OpenOffline(*pcapFile)
 	if err != nil {
 		log.Fatal(err)
 	}
