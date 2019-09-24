@@ -17,7 +17,7 @@ func errHndlr(err error) {
 	}
 }
 
-func worker(id int, jobs <-chan int, results chan<- int, hostname string, port int, password string) {
+func worker(id int, jobs <-chan int, results chan<- time.Duration, hostname string, port int, password string) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", hostname, port),
 		Password: password, // no password set
@@ -28,8 +28,7 @@ func worker(id int, jobs <-chan int, results chan<- int, hostname string, port i
 		pipe.Set(fmt.Sprintf("DTMDTM:%d", j), strconv.Itoa(j), 0)
 		pipe.Del(strconv.Itoa(j))
 		pipe.Exec()
-		duration := time.Since(t1)
-		fmt.Printf("%d %v\n", j, duration)
+		results <- time.Since(t1)
 	}
 	client.Close()
 }
@@ -43,7 +42,7 @@ func main() {
 	flag.Parse()
 
 	jobs := make(chan int, *messageCount)
-	results := make(chan int, *messageCount)
+	results := make(chan time.Duration, *messageCount)
 
 	for w := 0; w <= *threadCount; w++ {
 		go worker(w, jobs, results, *redisHost, *redisPort, *redisPassword)
@@ -56,8 +55,8 @@ func main() {
 
 	// Finally we collect all the results of the work.
 	for a := 0; a <= *messageCount-1; a++ {
-		<-results
+		v := <-results
+		fmt.Println(a, v)
 	}
-	os.Exit(0)
 
 }
