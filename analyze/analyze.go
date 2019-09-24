@@ -31,6 +31,7 @@ type pdata struct {
 
 func main() {
 	pcapFile := flag.String("file", "dump.pcap", "TCP Dump file")
+	isDTM := flag.Bool("parse-payload", false, "Parse Payload for generate")
 	flag.Parse()
 
 	handle, err = pcap.OpenOffline(*pcapFile)
@@ -74,17 +75,22 @@ func main() {
 	for key, value := range packets {
 		if value.count > 1 {
 			if value.pkts[0].payload == value.pkts[len(value.pkts)-1].payload {
-				//fmt.Println("-------------------------")
-				//fmt.Println(value.pkts[len(value.pkts)-1].payload)
-				m := r.FindAllString(value.pkts[len(value.pkts)-1].payload, -1)
-				if len(m) > 0 {
-					fmt.Printf("sequence: %d, time_diff: %d ms, key: %s, offset: %d\n",
+				if *isDTM {
+					m := r.FindAllString(value.pkts[len(value.pkts)-1].payload, -1)
+					if len(m) > 0 {
+						fmt.Printf("sequence: %d, time_diff: %d ms, offset: %d, key: %s\n",
+							key,
+							value.pkts[len(value.pkts)-1].timestamp.Sub(value.pkts[0].timestamp).Milliseconds(),
+							value.pkts[len(value.pkts)-1].offset,
+							strings.Replace(m[0], "DTMDTM:", "", -1))
+					}
+				} else {
+					fmt.Printf("sequence: %d, time_diff: %d ms, offset: %d\n",
 						key,
 						value.pkts[len(value.pkts)-1].timestamp.Sub(value.pkts[0].timestamp).Milliseconds(),
-						strings.Replace(m[0], "DTMDTM:", "", -1),
 						value.pkts[len(value.pkts)-1].offset)
-				}
 
+				}
 			}
 
 		}
