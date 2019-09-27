@@ -29,8 +29,7 @@ type pdata struct {
 
 func main() {
 	pcapFile := flag.String("file", "dump.pcap", "TCP Dump file")
-	//client := flag.String("client", "", "client IP address")
-	thresh := flag.Int64("threshold", 200, "Only print out longer than this ms")
+	thresh := flag.Int64("threshold", 200, "Microseconds threshold")
 	server := flag.String("server", "", "server IP address")
 	flag.Parse()
 
@@ -89,9 +88,9 @@ func main() {
 
 	for k, pkt := range packets {
 		if pkt.requestTime.Unix() > 0 && pkt.responseTime.Unix() > 0 {
-			diffMs := pkt.requestTime.Sub(pkt.responseTime).Milliseconds()
+			diffMs := pkt.responseTime.Sub(pkt.requestTime).Microseconds()
 			if diffMs >= *thresh {
-				fmt.Printf("%d -> %d ms %d %d request:\n %s\n\n", k, diffMs, pkt.requestSeq, pkt.responseSeq, pkt.requestPayload)
+				fmt.Printf("%d -> %d us %d %d request:\n %s\n\n", k, diffMs, pkt.requestSeq, pkt.responseSeq, pkt.requestPayload)
 			}
 		}
 	}
