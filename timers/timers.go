@@ -16,21 +16,21 @@ var (
 	err    error
 )
 
-type pktinfo struct {
-	request      string
-	response     string
-	requestTime  time.Time
-	responseTime time.Time
-}
-
 type pdata struct {
-	count int
-	pkts  []pktinfo
+	count          int
+	request        string
+	response       string
+	requestPayload string
+	requestTime    time.Time
+	responseTime   time.Time
+	requestSeq     int
+	responseSeq    int
 }
 
 func main() {
 	pcapFile := flag.String("file", "dump.pcap", "TCP Dump file")
-	client := flag.String("client", "", "client IP address")
+	//client := flag.String("client", "", "client IP address")
+	thresh := flag.Int64("threshold", 200, "Only print out longer than this ms")
 	server := flag.String("server", "", "server IP address")
 	flag.Parse()
 
@@ -40,7 +40,7 @@ func main() {
 	}
 	defer handle.Close()
 
-	//	packets := make(map[uint32]*pdata)
+	packets := make(map[uint32]*pdata)
 
 	// Set filter
 	var filter string = "tcp"
@@ -61,14 +61,39 @@ func main() {
 				ipLayer := packet.Layer(layers.LayerTypeIPv4)
 				myIP := ipLayer.(*layers.IPv4)
 				if myIP.SrcIP.String() == *server {
-					fmt.Printf("FromServer => Ack %d\n", tcp.Ack)
+					_, ok := packets[tcp.Seq]
+					if ok {
+						packets[tcp.Seq].responseTime = packet.Metadata().Timestamp
+						packets[tcp.Seq].responseSeq = packetCount
+						packets[tcp.Seq].count++
+					} else {
+						packets[tcp.Seq] = &pdata{responseTime: packet.Metadata().Timestamp, responseSeq: packetCount, count: 1}
+					}
 				}
-				if myIP.SrcIP.String() == *client {
-					fmt.Printf("FromClient => Seq %d\n", tcp.Seq)
+				if myIP.DstIP.String() == *server {
+					_, ok := packets[tcp.Ack]
+					if ok {
+						packets[tcp.Ack].requestTime = packet.Metadata().Timestamp
+						packets[tcp.Ack].requestSeq = packetCount
+						packets[tcp.Ack].requestPayload = string(tcp.Payload)
+						packets[tcp.Ack].count++
+					} else {
+						packets[tcp.Ack] = &pdata{requestTime: packet.Metadata().Timestamp, requestSeq: packetCount, requestPayload: string(tcp.Payload), count: 1}
+					}
 				}
 			}
 
 		}
 		packetCount++
 	}
+
+	for k, pkt := range packets {
+		if pkt.requestTime.Unix() > 0 && pkt.responseTime.Unix() > 0 {
+			diffMs := pkt.requestTime.Sub(pkt.responseTime).Milliseconds()
+			if diffMs >= *thresh {
+				fmt.Printf("%d -> %d ms %d %d request:\n %s\n\n", k, diffMs, pkt.requestSeq, pkt.responseSeq, pkt.requestPayload)
+			}
+		}
+	}
+
 }
