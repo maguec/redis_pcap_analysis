@@ -1,5 +1,9 @@
 # Redis Retransmit Finder
 
+## Prerequisites
+
+Please be sure to install libpcap0.8-dev
+
 ## Usage
 
 Start a TCP dump
